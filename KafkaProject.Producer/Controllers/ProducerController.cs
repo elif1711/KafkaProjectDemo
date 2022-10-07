@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace KafkaProject.Producer.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class ProducerController : ControllerBase
     {
@@ -17,25 +17,33 @@ namespace KafkaProject.Producer.Controllers
         public async Task<IActionResult> Post([FromBody] OrderRequest orderRequest)
         {
             string message = JsonSerializer.Serialize(orderRequest);
-            return Ok(await SendOrderRequest(topic, message));
+            return Ok(await SendOrderRequest(topic, message,typeof(OrderRequest)));
         }
-        private async Task<bool> SendOrderRequest(string topic, string message)
+
+        [HttpPost]
+        public async Task<IActionResult> Post2([FromBody] AddedBasketRequest orderRequest)
+        {
+            string message = JsonSerializer.Serialize(orderRequest);
+            return Ok(await SendOrderRequest(topic, message,typeof(AddedBasketRequest)));
+        }
+        private async Task<bool> SendOrderRequest(string topic, string message,Type type)
         {
             ProducerConfig config = new ProducerConfig
             {
                 BootstrapServers = bootstrapServers,
-                ClientId = Dns.GetHostName(),
+                ClientId = Dns.GetHostName()
             };
 
             try
             {
                 using (var producer = new ProducerBuilder
-                <Null, string>(config).Build())
+                <string, string>(config).Build())
                 {
                     var result = await producer.ProduceAsync
-                    (topic, new Message<Null, string>
+                    (topic, new Message<string, string>
                     {
-                        Value = message
+                        Value = message,
+                        Key = type.Name
                     });
 
                 return await Task.FromResult(true);

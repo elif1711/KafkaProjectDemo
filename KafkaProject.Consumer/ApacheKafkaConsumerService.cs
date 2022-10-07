@@ -1,4 +1,5 @@
 ﻿using Confluent.Kafka;
+using Microsoft.OpenApi.Extensions;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -21,7 +22,7 @@ namespace KafkaProject.Consumer
             try
             {
                 using (var consumerBuilder = new ConsumerBuilder
-                <Ignore, string>(config).Build())
+                <string, string>(config).Build())
                 {
                     consumerBuilder.Subscribe(topic);
                     var cancelToken = new CancellationTokenSource();
@@ -32,10 +33,17 @@ namespace KafkaProject.Consumer
                         {
                             var consumer = consumerBuilder.Consume
                                (cancelToken.Token);
-                            var orderRequest = JsonSerializer.Deserialize
-                                <OrderProcessingRequest>
-                                    (consumer.Message.Value);
-                            Debug.WriteLine($"Processing Order Id:{ orderRequest.OrderId}");
+
+                            var messageType = consumer.Key;
+                            switch (messageType)
+                            {
+                                case nameof(MessageType.AddedBasketRequest):
+                                    AddedBasketRequest req1 = JsonSerializer.Deserialize<AddedBasketRequest>(consumer.Message.Value);
+                                    break;
+                                case nameof(MessageType.OrderRequest):
+                                    OrderProcessingRequest req = JsonSerializer.Deserialize<OrderProcessingRequest>(consumer.Message.Value);
+                                    break;
+                            }
                         }
                     }
                     catch (OperationCanceledException)
